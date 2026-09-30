@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>拼出一片天 - 樂齡接龍配對牌生成器</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;600;700;900&display=swap" rel="stylesheet">
+  
+  <style>
+    body {
+      font-family: 'Noto Sans TC', sans-serif;
+    }
+    
+    /* A4 比例列印紙張標準設定 */
+    @page {
+      size: A4 portrait;
+      margin: 8mm;
+    }
+
+    @media print {
+      body {
+        background: #ffffff !important;
+        color: #000000 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .print-page {
+        box-shadow: none !important;
+        margin: 0 auto !important;
+        padding: 6mm !important;
+        width: 100% !important;
+        height: auto !important;
+        page-break-after: always !important;
+        break-after: page !important;
+      }
+      .print-card-box {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col">
+
+  <!-- 頂部導航 -->
+  <header class="no-print bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-rose-500 flex items-center justify-center text-white shadow-md">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-lg font-bold text-slate-900 leading-tight">拼出一片天 · 樂齡接龍道具生成器</h1>
+          <p class="text-xs text-slate-500">圖形 / 數字 / 文字三模組 · 充分利用 A4 空間 · 帶活動配件與底板</p>
+        </div>
+      </div>
+      
+      <!-- 快捷動作按鈕 -->
+      <div class="flex items-center space-x-2 sm:space-x-3">
+        <button id="btnRandomize" class="inline-flex items-center px-3.5 py-2 rounded-lg text-sm font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition">
+          <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+          </svg>
+          重新出題
+        </button>
+
+        <button id="btnPrint" class="inline-flex items-center px-4 py-2 rounded-lg text-sm font-bold bg-amber-500 hover:bg-amber-600 text-white shadow transition hover:shadow-md">
+          <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+          </svg>
+          列印 / 存為 PDF
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 flex flex-col lg:flex-row gap-6">
+    
+    <!-- 左側控制面板 -->
+    <aside class="no-print w-full lg:w-80 flex-shrink-0 space-y-5">
+      
+      <!-- 設定卡片 -->
+      <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm space-y-4">
+        <h2 class="text-base font-bold text-slate-900 border-b pb-2 flex items-center">
+          <span class="w-2 h-2 rounded-full bg-amber-500 mr-2"></span>
+          牌卡類型與設定
+        </h2>
+
+        <!-- 牌卡模式選擇：圖形、數字、文字 -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1.5">牌卡主題類型</label>
+          <div class="grid grid-cols-3 gap-1.5 bg-slate-100 p-1 rounded-lg">
+            <button type="button" data-theme="shape" class="theme-btn py-1.5 px-2 text-xs font-bold rounded-md bg-white text-slate-800 shadow-sm">
+              幾何形狀
+            </button>
+            <button type="button" data-theme="number" class="theme-btn py-1.5 px-2 text-xs font-semibold rounded-md text-slate-600 hover:text-slate-800">
+              樂齡數字
+            </button>
+            <button type="button" data-theme="text" class="theme-btn py-1.5 px-2 text-xs font-semibold rounded-md text-slate-600 hover:text-slate-800">
+              吉祥漢字
+            </button>
+          </div>
+        </div>
+
+        <!-- 牌數規格 -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1.5">總張數（閉合方框尺寸）</label>
+          <select id="cardCountSelect" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-sm font-medium focus:ring-2 focus:ring-amber-400 focus:outline-none">
+            <option value="8">8 張（每邊 2-3 張，適合入門與輕度失智長輩）</option>
+            <option value="10">10 張（標準長方形框）</option>
+            <option value="12">12 張（進階大環框）</option>
+          </select>
+        </div>
+
+        <!-- 每頁排版密度 -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1.5">A4 排版密度</label>
+          <select id="layoutDensitySelect" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-sm font-medium focus:ring-2 focus:ring-amber-400 focus:outline-none">
+            <option value="4_with_extra">每頁 4 張 + 底部多功能活動配件區（極力推薦）</option>
+            <option value="6">每頁 6 張（充實版面）</option>
+            <option value="8">每頁 8 張（節省紙張超值版）</option>
+          </select>
+        </div>
+
+        <!-- 組別識別標籤 -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1.5">組別防混標記</label>
+          <input type="text" id="setLabelInput" value="第一組 · 綠桌" maxlength="15" placeholder="例如：第一組 或 長輩姓名" 
+            class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-amber-400 focus:outline-none">
+        </div>
+
+        <!-- 輔助線與樣式開關 -->
+        <div class="space-y-2 pt-2 border-t border-slate-100">
+          <label class="flex items-center text-xs font-medium text-slate-700 cursor-pointer">
+            <input type="checkbox" id="showCutGuides" checked class="w-4 h-4 rounded text-amber-500 focus:ring-amber-400 border-slate-300">
+            <span class="ml-2">顯示裁切虛線與剪刀引導</span>
+          </label>
+          <label class="flex items-center text-xs font-medium text-slate-700 cursor-pointer">
+            <input type="checkbox" id="showBottomExtras" checked class="w-4 h-4 rounded text-amber-500 focus:ring-amber-400 border-slate-300">
+            <span class="ml-2">印出下半部配件（正解底板/獎勵章）</span>
+          </label>
+          <label class="flex items-center text-xs font-medium text-slate-700 cursor-pointer">
+            <input type="checkbox" id="highContrast" checked class="w-4 h-4 rounded text-amber-500 focus:ring-amber-400 border-slate-300">
+            <span class="ml-2">超粗深色邊框（視力退化友善）</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- 說明小卡 -->
+      <div class="bg-amber-50/80 border border-amber-200 rounded-2xl p-4 text-xs text-amber-900 leading-relaxed shadow-sm">
+        <div class="font-bold flex items-center mb-1.5 text-amber-800">
+          <svg class="w-4 h-4 mr-1 text-amber-600" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+          </svg>
+          空間利用與玩法建議
+        </div>
+        <p class="text-amber-800/90">
+          利用每頁下半部的<b>「閉合連環底板」</b>，可先讓手眼協調度較弱的長輩直接「照著底板圖形覆蓋上去」，逐步進階到抽走底板自行排成空心方框！
+        </p>
+      </div>
+
+    </aside>
+
+    <!-- 右側預覽區 (可切換：A4列印頁面 / 閉合解法圖解) -->
+    <section class="flex-1 flex flex-col space-y-4">
+      
+      <!-- 標籤頁切換 -->
+      <div class="no-print bg-white p-1.5 rounded-xl border border-slate-200 flex space-x-1 shadow-sm w-fit">
+        <button id="tabBtnSheets" class="px-4 py-2 rounded-lg text-sm font-bold bg-amber-500 text-white shadow-sm transition">
+          📄 A4 列印排版預覽
+        </button>
+        <button id="tabBtnSolution" class="px-4 py-2 rounded-lg text-sm font-semibold text-slate-600 hover:text-slate-900 transition">
+          🧩 首尾閉合答案與長輩教案
+        </button>
+      </div>
+
+      <!-- 內容區 1: A4 列印頁面預覽容器 -->
+      <div id="printSheetsContainer" class="space-y-6">
+        <!-- 動態由 JavaScript 生成 A4 頁面與卡片 -->
+      </div>
+
+      <!-- 內容區 2: 閉合解法連環視覺化 -->
+      <div id="solutionContainer" class="hidden bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6">
+        <div>
+          <h3 class="text-base font-bold text-slate-900">連環閉合解答示意（正解框）</h3>
+          <p class="text-xs text-slate-500">長輩成功拼出時，首尾必定完美相扣成為一個空心中空大環。</p>
+        </div>
+        <div id="solutionLoopBoard" class="p-6 bg-slate-50 rounded-xl border border-dashed border-slate-300 min-h-[300px] flex items-center justify-center">
+          <!-- 解答連環由 JS 繪製 -->
+        </div>
+
+        <!-- 玩法教案指引 -->
+        <div class="p-5 bg-blue-50/70 border border-blue-200 rounded-xl text-xs space-y-2 text-blue-900">
+          <div class="font-bold text-sm text-blue-800">帶領指導語（分級引導法）：</div>
+          <p><b>初階（視知覺對應）：</b>剪下下方的「對照底板條」，長輩只需把牌卡當骨牌一樣，照著底板圖形覆蓋相鄰配對。</p>
+          <p><b>中階（獨立方框接龍）：</b>收起底板，給予 8 張卡牌，先放第一張，請長輩找出旁邊能接在一起的卡片，轉彎拼成正方形。</p>
+          <p><b>高階（雙人競賽）：</b>兩位長輩各拿一組，計時看誰先拼出完整的「四方閉合圈」即敲鈴獲勝！</p>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <script>
+    // 1. 圖形定義庫
+    const SHAPE_DEFS = {
+      heart: {
+        name: '愛心',
+        render: () => `<svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-sm"><path d="M50 86 C 18 64, 4 45, 12 25 C 19 8, 38 7, 50 25 C 62 7, 81 8, 88 25 C 96 45, 82 64, 50 86 Z" fill="#ef4444" stroke="#991b1b" stroke-width="5" stroke-linejoin="round"/></svg>`
+      },
+      triangle: {
+        name: '三角形',
+        render: () => `<svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-sm"><polygon points="50,14 88,84 12,84" fill="#eab308" stroke="#a16207" stroke-width="6" stroke-linejoin="round"/></svg>`
+      },
+      circle: {
+        name: '圓形',
+        render: () => `<svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-sm"><circle cx="50" cy="50" r="38" fill="#2563eb" stroke="#1e3a8a" stroke-width="6"/></svg>`
+      },
+      arrow: {
+        name: '箭頭',
+        render: () => `<svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-sm"><path d="M50 12 L84 46 L62 46 L62 86 L38 86 L38 46 L16 46 Z" fill="#16a34a" stroke="#14532d" stroke-width="5" stroke-linejoin="round"/></svg>`
+      },
+      star: {
+        name: '星星',
+        render: () => `<svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-sm"><polygon points="50,10 61,38 92,39 67,58 76,88 50,70 24,88 33,58 8,39 39,38" fill="#f97316" stroke="#9a3412" stroke-width="5" stroke-linejoin="round"/></svg>`
+      },
+      square: {
+        name: '正方形',
+        render: () => `<svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-sm"><rect x="16" y="16" width="68" height="68" rx="8" fill="#9333ea" stroke="#581c87" stroke-width="6"/></svg>`
+      },
+      diamond: {
+        name: '菱形',
+        render: () => `<svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-sm"><polygon points="50,12 88,50 50,88 12,50" fill="#06b6d4" stroke="#164e63" stroke-width="6" stroke-linejoin="round"/></svg>`
+      },
+      crescent: {
+        name: '月亮',
+        render: () => `<svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-sm"><path d="M68 18 A 38 38 0 1 0 78 80 A 34 34 0 0 1 68 18 Z" fill="#f59e0b" stroke="#78350f" stroke-width="5" stroke-linejoin="round"/></svg>`
+      }
+    };
+
+    // 2. 數字庫（高對比超大字 + 圓角徽章，阿拉伯數字與大寫中文並列）
+    const NUMBER_DEFS = {
+      num_1: { name: '數字 1 (壹)', render: () => `<div class="w-full h-full flex flex-col items-center justify-center bg-red-100 rounded-2xl border-4 border-red-500 text-red-700 select-none"><span class="text-4xl sm:text-5xl font-black leading-none">1</span><span class="text-[11px] font-bold mt-1">壹</span></div>` },
+      num_2: { name: '數字 2 (貳)', render: () => `<div class="w-full h-full flex flex-col items-center justify-center bg-amber-100 rounded-2xl border-4 border-amber-500 text-amber-800 select-none"><span class="text-4xl sm:text-5xl font-black leading-none">2</span><span class="text-[11px] font-bold mt-1">貳</span></div>` },
+      num_3: { name: '數字 3 (參)', render: () => `<div class="w-full h-full flex flex-col items-center justify-center bg-emerald-100 rounded-2xl border-4 border-emerald-600 text-emerald-800 select-none"><span class="text-4xl sm:text-5xl font-black leading-none">3</span><span class="text-[11px] font-bold mt-1">參</span></div>` },
+      num_4: { name: '數字 4 (肆)', render: () => `<div class="w-full h-full flex flex-col items-center justify-center bg-cyan-100 rounded-2xl border-4 border-cyan-600 text-cyan-800 select-none"><span class="text-4xl sm:text-5xl font-black leading-none">4</span><span class="text-[11px] font-bold mt-1">肆</span></div>` },
+      num_5: { name: '數字 5 (伍)', render: () => `<div class="w-full h-full flex flex-col items-center justify-center bg-blue-100 rounded-2xl border-4 border-blue-600 text-blue-800 select-none"><span class="text-4xl sm:text-5xl font-black leading-none">5</span><span class="text-[11px] font-bold mt-1">伍</span></div>` },
+      num_6: { name: '數字 6 (陸)', render: () => `<div class="w-full h-full flex flex-col items-center justify-center bg-purple-100 rounded-2xl border-4 border-purple-600 text-purple-800 select-none"><span class="text-4xl sm:text-5xl font-black leading-none">6</span><span class="text-[11px] font-bold mt-1">陸</span></div>` },
+      num_7: { name: '數字 7 (柒)', render: () => `<div class="w-full h-full flex flex-col items-center justify-center bg-pink-100 rounded-2xl border-4 border-pink-600 text-pink-800 select-none"><span class="text-4xl sm:text-5xl font-black leading-none">7</span><span class="text-[11px] font-bold mt-1">柒</span></div>` },
+      num_8: { name: '數字 8 (捌)', render: () => `<div class="w-full h-full flex flex-col items-center justify-center bg-orange-100 rounded-2xl border-4 border-orange-600 text-orange-800 select-none"><span class="text-4xl sm:text-5xl font-black leading-none">8</span><span class="text-[11px] font-bold mt-1">捌</span></div>` }
+    };
+
+    // 3. 吉祥文字庫
+    const TEXT_DEFS = {
+      txt_fu: { name: '福氣', render: () => `<div class="w-full h-full flex flex-col items-center justify-center bg-red-500 rounded-2xl text-white font-black border-4 border-red-700 shadow-sm select-none"><span class="text-4xl sm:text-5xl">福</span><span class="text-[10px] opacity-90 mt-0.5">多福多壽</span></div>` },
+      txt_shou: { name: '長壽', render: () => `<div class="w-full h-full flex flex-col items-center justify-center bg-amber-500 rounded-2xl text-white font-black border-4 border-amber-700 shadow-sm select-none"><span class="text-4xl sm:text-5xl">壽</span><span class="text-[10px] opacity-90 mt-0.5">福壽綿長</span></div>` },
+      txt_xi: { name: '喜慶', render: () => `<div class="w-full h-full flex flex-col items-center justify-center bg-rose-600 rounded-2xl text-white font-black border-4 border-rose-800 shadow-sm select-none"><span class="text-4xl sm:text-5xl">喜</span><span class="text-[10px] opacity-90 mt-0.5">喜事臨門</span></div>` },
+      txt_chun: { name: '春來', render: () => `<div class="w-full h-full flex flex-col items-center justify-center bg-emerald-600 rounded-2xl text-white font-black border-4 border-emerald-800 shadow-sm select-none"><span class="text-4xl sm:text-5xl">春</span><span class="text-[10px] opacity-90 mt-0.5">大地回春</span></div>` },
+      txt_an: { name: '平安', render: () => `<div class="w-full h-full flex flex-col items-center justify-center bg-sky-600 rounded-2xl text-white font-black border-4 border-sky-800 shadow-sm select-none"><span class="text-4xl sm:text-5xl">安</span><span class="text-[10px] opacity-90 mt-0.5">歲歲平安</span></div>` },
+      txt_kang: { name: '健康', render: () => `<div class="w-full h-full flex flex-col items-center justify-center bg-teal-600 rounded-2xl text-white font-black border-4 border-teal-800 shadow-sm select-none"><span class="text-4xl sm:text-5xl">康</span><span class="text-[10px] opacity-90 mt-0.5">健步如飛</span></div>` },
+      txt_le: { name: '快樂', render: () => `<div class="w-full h-full flex flex-col items-center justify-center bg-orange-500 rounded-2xl text-white font-black border-4 border-orange-700 shadow-sm select-none"><span class="text-4xl sm:text-5xl">樂</span><span class="text-[10px] opacity-90 mt-0.5">樂活天天</span></div>` },
+      txt_ji: { name: '吉祥', render: () => `<div class="w-full h-full flex flex-col items-center justify-center bg-purple-600 rounded-2xl text-white font-black border-4 border-purple-800 shadow-sm select-none"><span class="text-4xl sm:text-5xl">吉</span><span class="text-[10px] opacity-90 mt-0.5">吉祥如意</span></div>` }
+    };
+
+    const THEME_MAP = {
+      shape: SHAPE_DEFS,
+      number: NUMBER_DEFS,
+      text: TEXT_DEFS
+    };
+
+    const state = {
+      theme: 'shape',
+      cardCount: 8,
+      density: '4_with_extra',
+      setLabel: '第一組 · 綠桌',
+      showCutGuides: true,
+      showBottomExtras: true,
+      highContrast: true,
+      cards: []
+    };
+
+    // 生成保證首尾相連成圈的牌卡演算法
+    function generateSolvableCards(count, themeKey) {
+      const currentDefs = THEME_MAP[themeKey];
+      const keys = Object.keys(currentDefs);
+      
+      // 洗牌符號陣列
+      for (let i = keys.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        const temp = keys[i];
+        keys[i] = keys[j];
+        keys[j] = temp;
+      }
+
+      // 產生接點節點 (Nodes)
+      const nodes = [];
+      for (let i = 0; i < count; i++) {
+        let sym = keys[i % keys.length];
+        if (i > 0 && sym === nodes[i - 1]) {
+          sym = keys[(i + 1) % keys.length];
+        }
+        nodes.push(sym);
+      }
+      
+      // 確保最後一個節點與第一個節點不完全相同且能平順接回
+      if (nodes[count - 1] === nodes[0] && keys.length > 2) {
+        const replacement = keys.find(k => k !== nodes[count - 2] && k !== nodes[0]);
+        if (replacement) {
+          nodes[count - 1] = replacement;
+        }
+      }
+
+      // 組裝卡牌對接端
+      const newCards = [];
+      for (let i = 0; i < count; i++) {
+        newCards.push({
+          id: 'card_' + i,
+          cardNum: i + 1,
+          left: nodes[i],
+          right: nodes[(i + 1) % count]
+        });
+      }
+      return newCards;
+    }
+
+    // 取得指定主題下的單一元件定義
+    function getItemDef(key) {
+      const currentDefs = THEME_MAP[state.theme] || SHAPE_DEFS;
+      return currentDefs[key] || Object.values(currentDefs)[0];
+    }
+
+    function getThemeTitle() {
+      if (state.theme === 'shape') return '幾何形狀版';
+      if (state.theme === 'number') return '長輩大數字版';
+      return '福祿壽吉祥字版';
+    }
+
+    function renderApp() {
+      renderPrintSheets();
+      renderSolutionLoop();
+    }
+
+    function renderPrintSheets() {
+      const container = document.getElementById('printSheetsContainer');
+      if (!container) return;
+      container.innerHTML = '';
+
+      let cardsPerPage = 4;
+      if (state.density === '6') cardsPerPage = 6;
+      if (state.density === '8') cardsPerPage = 8;
+
+      const totalPages = Math.ceil(state.cards.length / cardsPerPage);
+
+      for (let pageIdx = 0; pageIdx < totalPages; pageIdx++) {
+        const pageCards = state.cards.slice(pageIdx * cardsPerPage, (pageIdx + 1) * cardsPerPage);
+        
+        const pageEl = document.createElement('div');
+        pageEl.className = 'print-page bg-white mx-auto shadow-md rounded-2xl p-6 sm:p-8 border border-slate-200 relative flex flex-col justify-between';
+        pageEl.style.width = '100%';
+        pageEl.style.maxWidth = '210mm';
+        pageEl.style.minHeight = '297mm';
+
+        // 頁頂抬頭
+        const headerHtml = `
+          <div class="flex justify-between items-center border-b-2 border-slate-800 pb-2 mb-4">
+            <div class="flex items-center space-x-2">
+              <span class="text-xs font-black bg-amber-500 text-white px-2 py-0.5 rounded">樂齡教材</span>
+              <h2 class="text-base font-extrabold text-slate-900 tracking-wide">拼出一片天 · 閉合接龍牌 (${getThemeTitle()})</h2>
+            </div>
+            <div class="text-right text-xs text-slate-600 font-mono">
+              <span class="font-bold bg-slate-100 text-slate-800 px-2 py-0.5 rounded border border-slate-300 mr-2">${state.setLabel}</span>
+              第 ${pageIdx + 1} / ${totalPages} 頁
+            </div>
+          </div>
+        `;
+
+        // 根據密度調節卡片高度與網格
+        let cardHeightClass = 'h-36 sm:h-44';
+        let gridCols = 'grid grid-cols-2 gap-4';
+        if (state.density === '6') {
+          cardHeightClass = 'h-28 sm:h-32';
+          gridCols = 'grid grid-cols-2 gap-3';
+        } else if (state.density === '8') {
+          cardHeightClass = 'h-24 sm:h-28';
+          gridCols = 'grid grid-cols-2 gap-2.5';
+        }
+
+        let cardsHtml = `<div class="${gridCols}">`;
+
+        pageCards.forEach(card => {
+          const leftDef = getItemDef(card.left);
+          const rightDef = getItemDef(card.right);
+          const borderStyle = state.highContrast ? 'border-[3.5px] border-slate-900' : 'border-2 border-slate-400';
+
+          cardsHtml += `
+            <div class="relative group">
+              ${state.showCutGuides ? `
+                <div class="absolute -top-2.5 -left-1 text-[11px] text-slate-400 font-mono no-print">✂</div>
+                <div class="absolute -inset-1 border border-dashed border-slate-300 pointer-events-none rounded-xl"></div>
+              ` : ''}
+
+              <!-- 卡牌本體 -->
+              <div class="print-card-box ${cardHeightClass} ${borderStyle} rounded-2xl bg-white flex overflow-hidden relative shadow-sm">
+                
+                <!-- 左半部 -->
+                <div class="flex-1 flex flex-col items-center justify-center p-2.5 border-r-2 border-dashed border-slate-400 bg-white">
+                  <div class="w-14 h-14 sm:w-20 sm:h-20 flex items-center justify-center">
+                    ${leftDef.render()}
+                  </div>
+                  <span class="text-[11px] font-extrabold text-slate-700 mt-1 select-none tracking-wide">${leftDef.name}</span>
+                </div>
+
+                <!-- 右半部 -->
+                <div class="flex-1 flex flex-col items-center justify-center p-2.5 bg-white">
+                  <div class="w-14 h-14 sm:w-20 sm:h-20 flex items-center justify-center">
+                    ${rightDef.render()}
+                  </div>
+                  <span class="text-[11px] font-extrabold text-slate-700 mt-1 select-none tracking-wide">${rightDef.name}</span>
+                </div>
+
+                <!-- 底部防呆小標記 -->
+                <div class="absolute bottom-1 right-2 text-[9px] font-mono text-slate-500 font-bold select-none pointer-events-none flex items-center space-x-1 bg-white/90 px-1 rounded">
+                  <span>卡片 #${card.cardNum}</span>
+                  <span>·</span>
+                  <span>${state.setLabel}</span>
+                </div>
+              </div>
+            </div>
+          `;
+        });
+
+        cardsHtml += `</div>`;
+
+        // A4 下半部空間利用配件區
+        let extraSectionHtml = '';
+        if (state.showBottomExtras && (state.density === '4_with_extra' || pageCards.length <= 4)) {
+          extraSectionHtml = `
+            <div class="mt-6 pt-4 border-t-2 border-dashed border-slate-400 relative">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-bold text-slate-700 bg-slate-200 px-2 py-0.5 rounded">
+                  ✂ 剪下利用區：活動引導底板與計分配件 (充分利用紙張)
+                </span>
+                <span class="text-[11px] text-slate-400">長輩初學時可沿線直接鋪牌</span>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                
+                <!-- 配件 1: 初學者對照順序條 -->
+                <div class="sm:col-span-2 border-2 border-slate-800 rounded-xl p-2.5 bg-slate-50 flex flex-col justify-between">
+                  <div class="text-[10px] font-bold text-slate-600 mb-1 flex justify-between">
+                    <span>接龍正解鋪排底板（${state.setLabel}）</span>
+                    <span class="text-emerald-700 font-bold">✓ 依序首尾相接成圈</span>
+                  </div>
+                  <div class="flex items-center justify-between gap-1 overflow-hidden py-1">
+                    ${state.cards.slice(0, 8).map((c, i) => `
+                      <div class="flex-1 bg-white border border-slate-300 rounded p-1 text-center">
+                        <div class="text-[9px] font-black text-slate-400">#${i+1}</div>
+                        <div class="text-[10px] font-bold text-slate-800 truncate">${getItemDef(c.left).name.split(' ')[0]}</div>
+                        <div class="text-[8px] text-amber-600 font-black">接</div>
+                        <div class="text-[10px] font-bold text-slate-800 truncate">${getItemDef(c.right).name.split(' ')[0]}</div>
+                      </div>
+                    `).join('')}
+                  </div>
+                </div>
+
+                <!-- 配件 2: 長輩得獎徽章 -->
+                <div class="border-2 border-slate-800 rounded-xl p-2.5 bg-amber-50 flex flex-col justify-between items-center text-center">
+                  <span class="text-[10px] font-extrabold text-amber-900">榮譽徽章 / 裁判桌立卡</span>
+                  <div class="my-1 w-12 h-12 rounded-full border-2 border-amber-600 bg-amber-400 text-amber-950 font-black flex flex-col items-center justify-center text-[10px] shadow-inner">
+                    <span>拼圖</span>
+                    <span class="text-xs">達人</span>
+                  </div>
+                  <span class="text-[9px] text-amber-800">完成接龍即可貼於集點卡</span>
+                </div>
+
+              </div>
+            </div>
+          `;
+        }
+
+        // 頁尾提示
+        const footerHtml = `
+          <div class="mt-3 pt-2 border-t border-slate-200 flex justify-between items-center text-[10px] text-slate-400">
+            <span>建議：A4 列印後貼於厚紙板 / 珍珠板裁切，耐用且方便手部無力長輩拾取。</span>
+            <span>拼出一片天 樂齡動腦輔具 · 認知促進系列</span>
+          </div>
+        `;
+
+        pageEl.innerHTML = headerHtml + cardsHtml + extraSectionHtml + footerHtml;
+        container.appendChild(pageEl);
+      }
+    }
+
+    function renderSolutionLoop() {
+      const board = document.getElementById('solutionLoopBoard');
+      if (!board) return;
+      board.innerHTML = '';
+
+      const total = state.cards.length;
+      if (total === 0) return;
+
+      const wrap = document.createElement('div');
+      wrap.className = 'w-full max-w-3xl flex flex-col items-center';
+
+      let loopHtml = `
+        <div class="text-center mb-4">
+          <span class="inline-block bg-emerald-100 text-emerald-800 text-xs font-bold px-3 py-1 rounded-full mb-1">
+            ✓ 驗證通過：全套 ${total} 張卡牌首尾相連封閉回路
+          </span>
+          <p class="text-xs text-slate-500">（老師/照服員可依據此順序協助長輩驗證）</p>
+        </div>
+        <div class="flex flex-wrap justify-center items-center gap-2">
+      `;
+
+      state.cards.forEach((card, idx) => {
+        const leftDef = getItemDef(card.left);
+        const rightDef = getItemDef(card.right);
+        loopHtml += `
+          <div class="flex items-center bg-white border border-slate-300 rounded-lg p-1.5 shadow-sm">
+            <span class="text-[10px] font-mono font-bold text-slate-400 mr-1.5">#${card.cardNum}</span>
+            <div class="flex items-center space-x-1.5 bg-slate-50 px-2 py-1 rounded border border-slate-200">
+              <span class="w-5 h-5 flex items-center justify-center">${leftDef.render()}</span>
+              <span class="text-xs text-slate-300 font-bold">|</span>
+              <span class="w-5 h-5 flex items-center justify-center">${rightDef.render()}</span>
+            </div>
+            ${idx < total - 1 ? '<span class="mx-1 text-slate-400 font-bold">➔</span>' : '<span class="mx-1 text-emerald-600 font-bold">↻ 接回第1張</span>'}
+          </div>
+        `;
+      });
+
+      loopHtml += `</div>`;
+      wrap.innerHTML = loopHtml;
+      board.appendChild(wrap);
+    }
+
+    function initListeners() {
+      // 重新出題
+      const btnRandomize = document.getElementById('btnRandomize');
+      if (btnRandomize) {
+        btnRandomize.addEventListener('click', () => {
+          state.cards = generateSolvableCards(state.cardCount, state.theme);
+          renderApp();
+        });
+      }
+
+      // 主題切換
+      const themeBtns = document.querySelectorAll('.theme-btn');
+      themeBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          state.theme = btn.dataset.theme;
+          themeBtns.forEach(b => {
+            if (b.dataset.theme === state.theme) {
+              b.className = 'theme-btn py-1.5 px-2 text-xs font-bold rounded-md bg-white text-slate-900 shadow-sm';
+            } else {
+              b.className = 'theme-btn py-1.5 px-2 text-xs font-semibold rounded-md text-slate-600 hover:text-slate-800';
+            }
+          });
+          state.cards = generateSolvableCards(state.cardCount, state.theme);
+          renderApp();
+        });
+      });
+
+      // 卡牌數量選擇
+      const cardCountSelect = document.getElementById('cardCountSelect');
+      if (cardCountSelect) {
+        cardCountSelect.addEventListener('change', (e) => {
+          state.cardCount = parseInt(e.target.value, 10);
+          state.cards = generateSolvableCards(state.cardCount, state.theme);
+          renderApp();
+        });
+      }
+
+      // A4 密度選擇
+      const layoutDensitySelect = document.getElementById('layoutDensitySelect');
+      if (layoutDensitySelect) {
+        layoutDensitySelect.addEventListener('change', (e) => {
+          state.density = e.target.value;
+          renderPrintSheets();
+        });
+      }
+
+      // 標籤頁切換
+      const tabSheets = document.getElementById('tabBtnSheets');
+      const tabSolution = document.getElementById('tabBtnSolution');
+      const sheetsView = document.getElementById('printSheetsContainer');
+      const solutionView = document.getElementById('solutionContainer');
+
+      if (tabSheets && tabSolution && sheetsView && solutionView) {
+        tabSheets.addEventListener('click', () => {
+          tabSheets.className = 'px-4 py-2 rounded-lg text-sm font-bold bg-amber-500 text-white shadow-sm transition';
+          tabSolution.className = 'px-4 py-2 rounded-lg text-sm font-semibold text-slate-600 hover:text-slate-900 transition';
+          sheetsView.classList.remove('hidden');
+          solutionView.classList.add('hidden');
+        });
+
+        tabSolution.addEventListener('click', () => {
+          tabSolution.className = 'px-4 py-2 rounded-lg text-sm font-bold bg-amber-500 text-white shadow-sm transition';
+          tabSheets.className = 'px-4 py-2 rounded-lg text-sm font-semibold text-slate-600 hover:text-slate-900 transition';
+          sheetsView.classList.add('hidden');
+          solutionView.classList.remove('hidden');
+        });
+      }
+
+      // 組別文字變更
+      const setLabelInput = document.getElementById('setLabelInput');
+      if (setLabelInput) {
+        setLabelInput.addEventListener('input', (e) => {
+          state.setLabel = e.target.value.trim() || '活動牌組';
+          renderPrintSheets();
+        });
+      }
+
+      // 開關選項
+      const showCutGuides = document.getElementById('showCutGuides');
+      if (showCutGuides) {
+        showCutGuides.addEventListener('change', (e) => {
+          state.showCutGuides = e.target.checked;
+          renderPrintSheets();
+        });
+      }
+
+      const showBottomExtras = document.getElementById('showBottomExtras');
+      if (showBottomExtras) {
+        showBottomExtras.addEventListener('change', (e) => {
+          state.showBottomExtras = e.target.checked;
+          renderPrintSheets();
+        });
+      }
+
+      const highContrast = document.getElementById('highContrast');
+      if (highContrast) {
+        highContrast.addEventListener('change', (e) => {
+          state.highContrast = e.target.checked;
+          renderPrintSheets();
+        });
+      }
+
+      // 觸發列印 / 存成 PDF
+      const btnPrint = document.getElementById('btnPrint');
+      if (btnPrint) {
+        btnPrint.addEventListener('click', () => {
+          if (tabSheets) tabSheets.click();
+          setTimeout(() => {
+            window.print();
+          }, 150);
+        });
+      }
+    }
+
+    // 初始化啟動
+    function startGenerator() {
+      try {
+        state.cards = generateSolvableCards(state.cardCount, state.theme);
+        initListeners();
+        renderApp();
+      } catch (err) {
+        console.error('初始化失敗:', err);
+      }
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', startGenerator);
+    } else {
+      startGenerator();
+    }
+  </script>
+</body>
+</html>
